@@ -124,6 +124,10 @@ const deleteReply = async (req, res) => {
     const { firebaseUid } = req.body;
     const user = await User.findOne({ firebaseUid }).select('_id');
     
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
     const reply = await Reply.findById(req.params.id);
     
     if (!reply) {
@@ -140,7 +144,7 @@ const deleteReply = async (req, res) => {
     // Update counts
     const post = await Post.findById(reply.postId);
     if (post) {
-      post.repliesCount -= 1;
+      post.repliesCount = Math.max(0, post.repliesCount - 1);
       await post.save();
     }
     

@@ -45,7 +45,7 @@ const Search = ({ userData }) => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await postAPI.deletePost(postId, userData._id);
+      await postAPI.deletePost(postId, userData.firebaseUid); // Changed from userData._id
       setPosts(posts.filter(post => post._id !== postId));
     } catch (error) {
       console.error('Error deleting post:', error);

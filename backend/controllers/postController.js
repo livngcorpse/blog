@@ -135,10 +135,9 @@ const deletePost = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to delete this post' });
     }
     
-    // Delete all replies associated with this post
     await Reply.deleteMany({ postId: req.params.id });
-    
     await Post.findByIdAndDelete(req.params.id);
+    
     res.status(200).json({ message: 'Post deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

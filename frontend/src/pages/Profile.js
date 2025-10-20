@@ -40,7 +40,7 @@ const Profile = ({ userData }) => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await postAPI.deletePost(postId, userData._id);
+      await postAPI.deletePost(postId, userData.firebaseUid); // Changed from userData._id`
       setUserPosts(userPosts.filter(post => post._id !== postId));
       setUserStats(prev => ({ ...prev, postsCount: prev.postsCount - 1 }));
     } catch (error) {

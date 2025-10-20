@@ -54,7 +54,7 @@ const SinglePost = ({ userData }) => {
     setLikesCount(liked ? likesCount - 1 : likesCount + 1);
 
     try {
-      const response = await postAPI.toggleLike(post._id, userData._id);
+      const response = await postAPI.toggleLike(post._id, userData.firebaseUid); // Changed from userData._id
       setLiked(response.data.liked);
       setLikesCount(response.data.likesCount);
     } catch (error) {

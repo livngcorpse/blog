@@ -77,11 +77,11 @@ const getCurrentUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Return full data for authenticated user
+    // Return full data for authenticated user INCLUDING firebaseUid
     res.status(200).json({
       ...user.toSafeObject(),
       email: user.email,
-      firebaseUid: user.firebaseUid
+      firebaseUid: user.firebaseUid  // This is critical!
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

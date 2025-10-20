@@ -261,7 +261,7 @@ const ReplySystem = ({ postId, userData }) => {
       const replyData = {
         postId,
         content: newReply,
-        firebaseUid: userData.firebaseUid || userData._id
+        firebaseUid: userData.firebaseUid
       };
 
       const response = await replyAPI.createReply(replyData);
@@ -283,7 +283,7 @@ const ReplySystem = ({ postId, userData }) => {
         postId,
         parentReplyId,
         content,
-        firebaseUid: userData.firebaseUid || userData._id
+        firebaseUid: userData.firebaseUid
       };
 
       const response = await replyAPI.createReply(replyData);
@@ -318,7 +318,7 @@ const ReplySystem = ({ postId, userData }) => {
     if (!window.confirm('Are you sure you want to delete this reply?')) return;
 
     try {
-      await replyAPI.deleteReply(replyId, userData._id);
+      await replyAPI.deleteReply(replyId, userData.firebaseUid); // Changed from userData._id
       
       const removeReply = (replies) => {
         return replies
