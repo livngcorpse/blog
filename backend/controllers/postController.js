@@ -40,6 +40,131 @@ const getAllPosts = async (req, res) => {
   }
 };
 
+// Get single post by ID
+const getPostById = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id)
+      .populate('authorId', 'username displayName profilePhoto');
+    
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    
+    // Increment view count
+    post.viewsCount += 1;
+    await post.save();
+    
+    res.status(200).json(post);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Create new post
+const createPost = async (req, res) => {
+  try {
+    const { title, content, tags, firebaseUid } = req.body;
+    
+    if (!title || !content || !firebaseUid) {
+      return res.status(400).json({ 
+        message: 'Title, content, and firebaseUid are required' 
+      });
+    }
+    
+    const user = await User.findOne({ firebaseUid }).select('_id');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const newPost = new Post({
+      title,
+      content,
+      tags: tags || [],
+      authorId: user._id
+    });
+    
+    const savedPost = await newPost.save();
+    const populatedPost = await Post.findById(savedPost._id)
+      .populate('authorId', 'username displayName profilePhoto');
+    
+    res.status(201).json(populatedPost);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Update post
+const updatePost = async (req, res) => {
+  try {
+    const { title, content, tags, firebaseUid } = req.body;
+    
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    
+    const user = await User.findOne({ firebaseUid }).select('_id');
+    if (!user || post.authorId.toString() !== user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized to update this post' });
+    }
+    
+    const updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      { title, content, tags, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    ).populate('authorId', 'username displayName profilePhoto');
+    
+    res.status(200).json(updatedPost);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Delete post
+const deletePost = async (req, res) => {
+  try {
+    const { firebaseUid } = req.body;
+    
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    
+    const user = await User.findOne({ firebaseUid }).select('_id');
+    if (!user || post.authorId.toString() !== user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized to delete this post' });
+    }
+    
+    // Delete all replies associated with this post
+    await Reply.deleteMany({ postId: req.params.id });
+    
+    await Post.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get posts by author
+const getPostsByAuthor = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = await User.findOne({ username }).select('_id');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const posts = await Post.find({ authorId: user._id })
+      .populate('authorId', 'username displayName profilePhoto')
+      .sort({ createdAt: -1 });
+    
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Toggle like on post
 const toggleLike = async (req, res) => {
   try {
@@ -110,8 +235,12 @@ const getTrendingTags = async (req, res) => {
 
 module.exports = {
   getAllPosts,
+  getPostById,
+  createPost,
+  updatePost,
+  deletePost,
+  getPostsByAuthor,
   toggleLike,
   getPostsByTag,
-  getTrendingTags,
-  // ... other existing methods
+  getTrendingTags
 };

@@ -1,0 +1,85 @@
+/* frontend/src/components/TrendingTags.css */
+.trending-tags-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.5rem;
+}
+
+.trending-tags-card h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  color: #1a1a1a;
+}
+
+.loading-tags {
+  color: #6b7280;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trending-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.trending-tag:hover {
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border-color: #667eea;
+  transform: translateX(4px);
+}
+
+.tag-name {
+  color: #667eea;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.tag-count {
+  background: #e5e7eb;
+  color: #6b7280;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.trending-tag:hover .tag-count {
+  background: #667eea;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .trending-tags-card {
+    padding: 1rem;
+  }
+
+  .trending-tag {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .tag-name {
+    font-size: 0.9rem;
+  }
+
+  .tag-count {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+  }
+}
