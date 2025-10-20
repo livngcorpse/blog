@@ -1,12 +1,17 @@
+// frontend/src/pages/SinglePost.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { postAPI } from '../services/api';
-import CommentBox from '../components/CommentBox';
+import ReplySystem from '../components/ReplySystem';
+import './SinglePost.css';
 
-const SinglePost = ({ currentUser }) => {
+const SinglePost = ({ userData }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -18,6 +23,12 @@ const SinglePost = ({ currentUser }) => {
     try {
       const response = await postAPI.getPostById(id);
       setPost(response.data);
+      setLikesCount(response.data.likesCount || 0);
+      
+      if (userData) {
+        setLiked(response.data.likes?.some(like => like.userId === userData._id) || false);
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching post:', error);
@@ -26,11 +37,41 @@ const SinglePost = ({ currentUser }) => {
     }
   };
 
+  const handleLike = async () => {
+    if (!userData) {
+      navigate('/login');
+      return;
+    }
+
+    if (likeLoading) return;
+
+    setLikeLoading(true);
+    const previousLiked = liked;
+    const previousCount = likesCount;
+
+    // Optimistic update
+    setLiked(!liked);
+    setLikesCount(liked ? likesCount - 1 : likesCount + 1);
+
+    try {
+      const response = await postAPI.toggleLike(post._id, userData._id);
+      setLiked(response.data.liked);
+      setLikesCount(response.data.likesCount);
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // Revert on error
+      setLiked(previousLiked);
+      setLikesCount(previousCount);
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
   const handleDeletePost = async () => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await postAPI.deletePost(id, currentUser.uid);
+      await postAPI.deletePost(id, userData._id);
       navigate('/');
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -39,164 +80,152 @@ const SinglePost = ({ currentUser }) => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   };
 
-  if (loading) {
-    return <div style={styles.loading}>Loading post...</div>;
-  }
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
-  if (error || !post) {
+  if (loading) {
     return (
-      <div style={styles.error}>
-        <h2>Post Not Found</h2>
-        <p>The post you're looking for doesn't exist or has been deleted.</p>
-        <Link to="/" style={styles.homeLink}>← Back to Home</Link>
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading post...</p>
       </div>
     );
   }
 
-  const isAuthor = currentUser && currentUser.uid === post.authorId;
+  if (error || !post) {
+    return (
+      <div className="error-container">
+        <h2>Post Not Found</h2>
+        <p>The post you're looking for doesn't exist or has been deleted.</p>
+        <Link to="/" className="back-home-link">← Back to Home</Link>
+      </div>
+    );
+  }
+
+  const isAuthor = userData && post.authorId?._id === userData._id;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.navigation}>
-        <Link to="/" style={styles.backLink}>← Back to Posts</Link>
-      </div>
+    <div className="single-post-page">
+      <div className="single-post-container">
+        <div className="post-navigation">
+          <Link to="/" className="back-link">← Back to Posts</Link>
+        </div>
 
-      <article style={styles.post}>
-        <div style={styles.postHeader}>
-          <h1 style={styles.title}>{post.title}</h1>
-          {isAuthor && (
-            <div style={styles.actions}>
-              <Link to={`/edit-post/${post._id}`} style={styles.editBtn}>
-                Edit Post
+        <article className="post-content-wrapper">
+          <header className="post-full-header">
+            <div className="post-author-section">
+              <Link to={`/profile/${post.authorId?.username}`} className="author-link-large">
+                {post.authorId?.profilePhoto ? (
+                  <img
+                    src={post.authorId.profilePhoto}
+                    alt={post.authorId.displayName}
+                    className="author-avatar-large"
+                  />
+                ) : (
+                  <div className="author-avatar-large author-avatar-placeholder">
+                    {getInitials(post.authorId?.displayName)}
+                  </div>
+                )}
+                <div className="author-details">
+                  <span className="author-name-large">{post.authorId?.displayName}</span>
+                  <span className="author-username-large">@{post.authorId?.username}</span>
+                </div>
               </Link>
-              <button onClick={handleDeletePost} style={styles.deleteBtn}>
-                Delete Post
-              </button>
+
+              {isAuthor && (
+                <div className="post-owner-actions">
+                  <Link to={`/edit-post/${post._id}`} className="edit-post-btn">
+                    ✏️ Edit
+                  </Link>
+                  <button onClick={handleDeletePost} className="delete-post-btn">
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div style={styles.postMeta}>
-          <small style={styles.date}>
-            Created: {formatDate(post.createdAt)}
-          </small>
-          {post.updatedAt !== post.createdAt && (
-            <small style={styles.date}>
-              Last updated: {formatDate(post.updatedAt)}
-            </small>
-          )}
-        </div>
+            <h1 className="post-full-title">{post.title}</h1>
 
-        <div style={styles.content}>
-          {post.content.split('\n').map((paragraph, index) => (
-            <p key={index} style={styles.paragraph}>
-              {paragraph}
-            </p>
-          ))}
-        </div>
-      </article>
+            <div className="post-metadata">
+              <span className="post-date-full">{formatDate(post.createdAt)}</span>
+              <span className="metadata-separator">·</span>
+              <span className="reading-time">{post.readingTime} min read</span>
+              <span className="metadata-separator">·</span>
+              <span className="view-count">{post.viewsCount || 0} views</span>
+            </div>
 
-      {/* Comments Section */}
-      <CommentBox postId={post._id} currentUser={currentUser} />
+            {post.tags && post.tags.length > 0 && (
+              <div className="post-tags-full">
+                {post.tags.map((tag, index) => (
+                  <Link
+                    key={index}
+                    to={`/tag/${tag}`}
+                    className="post-tag-full"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </header>
+
+          <div className="post-content-body">
+            {post.content.split('\n').map((paragraph, index) => (
+              paragraph.trim() && <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+
+          <footer className="post-footer">
+            <div className="post-interactions">
+              <button
+                onClick={handleLike}
+                className={`interaction-btn-large like-btn-large ${liked ? 'liked' : ''}`}
+                disabled={likeLoading}
+              >
+                <span className="interaction-icon-large">{liked ? '❤️' : '🤍'}</span>
+                <span className="interaction-label">
+                  {likesCount} {likesCount === 1 ? 'Like' : 'Likes'}
+                </span>
+              </button>
+
+              <div className="interaction-btn-large">
+                <span className="interaction-icon-large">💬</span>
+                <span className="interaction-label">
+                  {post.repliesCount || 0} {post.repliesCount === 1 ? 'Reply' : 'Replies'}
+                </span>
+              </div>
+            </div>
+          </footer>
+        </article>
+
+        {/* Reply System */}
+        <ReplySystem postId={post._id} userData={userData} />
+      </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    maxWidth: '800px',
-    margin: '0 auto',
-    padding: '0 1rem'
-  },
-  loading: {
-    textAlign: 'center',
-    fontSize: '1.2rem',
-    marginTop: '2rem'
-  },
-  error: {
-    textAlign: 'center',
-    marginTop: '2rem'
-  },
-  homeLink: {
-    color: '#007bff',
-    textDecoration: 'none'
-  },
-  navigation: {
-    marginBottom: '2rem'
-  },
-  backLink: {
-    color: '#007bff',
-    textDecoration: 'none',
-    fontSize: '0.9rem'
-  },
-  post: {
-    backgroundColor: 'white',
-    padding: '2rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    marginBottom: '2rem'
-  },
-  postHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '1rem'
-  },
-  title: {
-    margin: '0',
-    color: '#333',
-    lineHeight: '1.3'
-  },
-  actions: {
-    display: 'flex',
-    gap: '0.5rem',
-    flexShrink: 0,
-    marginLeft: '1rem'
-  },
-  editBtn: {
-    padding: '0.5rem 1rem',
-    backgroundColor: '#28a745',
-    color: 'white',
-    textDecoration: 'none',
-    borderRadius: '4px',
-    fontSize: '0.9rem'
-  },
-  deleteBtn: {
-    padding: '0.5rem 1rem',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.9rem'
-  },
-  postMeta: {
-    display: 'flex',
-    gap: '1rem',
-    marginBottom: '2rem',
-    paddingBottom: '1rem',
-    borderBottom: '1px solid #eee'
-  },
-  date: {
-    color: '#666',
-    fontSize: '0.9rem'
-  },
-  content: {
-    lineHeight: '1.8',
-    fontSize: '1.1rem'
-  },
-  paragraph: {
-    marginBottom: '1rem'
-  }
 };
 
 export default SinglePost;

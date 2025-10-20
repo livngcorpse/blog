@@ -1,10 +1,12 @@
+// frontend/src/pages/CreatePost.js
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { postAPI } from '../services/api';
 
-const CreatePost = ({ currentUser }) => {
+const CreatePost = ({ userData }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [tags, setTags] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ const CreatePost = ({ currentUser }) => {
       return;
     }
 
-    if (!currentUser) {
+    if (!userData) {
       setError('You must be logged in to create a post');
       return;
     }
@@ -29,19 +31,20 @@ const CreatePost = ({ currentUser }) => {
       const postData = {
         title: title.trim(),
         content: content.trim(),
-        authorId: currentUser.uid
+        tags: tags.trim() ? tags.split(',').map(tag => tag.trim().toLowerCase()).filter(tag => tag) : [],
+        firebaseUid: userData.firebaseUid || userData._id
       };
 
       const response = await postAPI.createPost(postData);
       navigate(`/post/${response.data._id}`);
     } catch (error) {
       console.error('Error creating post:', error);
-      setError('Failed to create post. Please try again.');
+      setError(error.response?.data?.message || 'Failed to create post. Please try again.');
       setLoading(false);
     }
   };
 
-  if (!currentUser) {
+  if (!userData) {
     return (
       <div style={styles.container}>
         <div style={styles.unauthorized}>
@@ -76,11 +79,11 @@ const CreatePost = ({ currentUser }) => {
               onChange={(e) => setTitle(e.target.value)}
               style={styles.input}
               placeholder="Enter your post title..."
-              maxLength="100"
+              maxLength="200"
               disabled={loading}
             />
             <small style={styles.charCount}>
-              {title.length}/100 characters
+              {title.length}/200 characters
             </small>
           </div>
 
@@ -99,6 +102,24 @@ const CreatePost = ({ currentUser }) => {
             />
             <small style={styles.charCount}>
               {content.length} characters
+            </small>
+          </div>
+
+          <div style={styles.formGroup}>
+            <label htmlFor="tags" style={styles.label}>
+              Tags (optional)
+            </label>
+            <input
+              type="text"
+              id="tags"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              style={styles.input}
+              placeholder="javascript, react, tutorial (comma separated)"
+              disabled={loading}
+            />
+            <small style={styles.charCount}>
+              Separate tags with commas
             </small>
           </div>
 
@@ -125,8 +146,8 @@ const CreatePost = ({ currentUser }) => {
           <ul>
             <li>Keep your title clear and engaging</li>
             <li>Use paragraphs to break up your content</li>
+            <li>Add relevant tags to help others find your post</li>
             <li>Write in a conversational tone</li>
-            <li>Preview your post before publishing</li>
           </ul>
         </div>
       </div>
