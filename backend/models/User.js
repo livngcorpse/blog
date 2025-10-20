@@ -82,3 +82,6 @@ userSchema.methods.toSafeObject = function() {
     createdAt: this.createdAt
   };
 };
+
+// CRITICAL: Export the model
+module.exports = mongoose.model('User', userSchema);
