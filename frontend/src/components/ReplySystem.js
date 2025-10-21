@@ -1,4 +1,4 @@
-// frontend/src/components/ReplySystem.js
+// frontend/src/components/ReplySystem.js - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { replyAPI } from '../services/api';
@@ -11,8 +11,6 @@ const ReplyItem = ({ reply, userData, onDelete, onReply, level = 0 }) => {
     reply.likes?.some(like => like.userId === userData?._id) || false
   );
   const [likesCount, setLikesCount] = useState(reply.likesCount || 0);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(reply.content);
   const navigate = useNavigate();
 
   const formatDate = (dateString) => {
@@ -44,7 +42,7 @@ const ReplyItem = ({ reply, userData, onDelete, onReply, level = 0 }) => {
     setLikesCount(liked ? likesCount - 1 : likesCount + 1);
 
     try {
-      const response = await replyAPI.toggleLikeReply(reply._id, userData._id);
+      const response = await replyAPI.toggleLikeReply(reply._id, userData.firebaseUid);
       setLiked(response.data.liked);
       setLikesCount(response.data.likesCount);
     } catch (error) {
@@ -64,21 +62,6 @@ const ReplyItem = ({ reply, userData, onDelete, onReply, level = 0 }) => {
       setShowReplyForm(false);
     } catch (error) {
       console.error('Error submitting reply:', error);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!editContent.trim()) return;
-
-    try {
-      await replyAPI.updateReply(reply._id, {
-        content: editContent,
-        userId: userData._id
-      });
-      reply.content = editContent;
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating reply:', error);
     }
   };
 
@@ -103,33 +86,34 @@ const ReplyItem = ({ reply, userData, onDelete, onReply, level = 0 }) => {
             src={reply.authorId.profilePhoto}
             alt={reply.authorId.displayName}
             className="reply-avatar"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
           />
-        ) : (
-          <div className="reply-avatar reply-avatar-placeholder">
-            {getInitials(reply.authorId?.displayName)}
-          </div>
-        )}
+        ) : null}
+        <div 
+          className="reply-avatar reply-avatar-placeholder"
+          style={{ display: reply.authorId?.profilePhoto ? 'none' : 'flex' }}
+        >
+          {getInitials(reply.authorId?.displayName)}
+        </div>
       </div>
 
       <div className="reply-content-wrapper">
         <div className="reply-header">
           <div className="reply-author-info">
-            <span className="reply-author-name">{reply.authorId?.displayName}</span>
-            <span className="reply-author-username">@{reply.authorId?.username}</span>
+            <span className="reply-author-name">{reply.authorId?.displayName || 'Anonymous'}</span>
+            <span className="reply-author-username">@{reply.authorId?.username || 'unknown'}</span>
             <span className="reply-date">{formatDate(reply.createdAt)}</span>
           </div>
 
           {isAuthor && (
             <div className="reply-actions">
               <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="reply-action-btn"
-              >
-                ✏️
-              </button>
-              <button
                 onClick={() => onDelete(reply._id)}
                 className="reply-action-btn delete"
+                title="Delete reply"
               >
                 🗑️
               </button>
@@ -137,26 +121,7 @@ const ReplyItem = ({ reply, userData, onDelete, onReply, level = 0 }) => {
           )}
         </div>
 
-        {isEditing ? (
-          <div className="reply-edit-form">
-            <textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="reply-edit-input"
-              rows="3"
-            />
-            <div className="reply-edit-actions">
-              <button onClick={handleUpdate} className="reply-save-btn">
-                Save
-              </button>
-              <button onClick={() => setIsEditing(false)} className="reply-cancel-btn">
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="reply-text">{reply.content}</p>
-        )}
+        <p className="reply-text">{reply.content}</p>
 
         <div className="reply-footer">
           <button
@@ -189,12 +154,13 @@ const ReplyItem = ({ reply, userData, onDelete, onReply, level = 0 }) => {
             <textarea
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder={`Reply to ${reply.authorId?.displayName}...`}
+              placeholder={`Reply to ${reply.authorId?.displayName || 'this user'}...`}
               className="nested-reply-input"
               rows="3"
+              maxLength="5000"
             />
             <div className="nested-reply-actions">
-              <button type="submit" className="nested-reply-submit">
+              <button type="submit" className="nested-reply-submit" disabled={!replyContent.trim()}>
                 Reply
               </button>
               <button
@@ -231,6 +197,7 @@ const ReplySystem = ({ postId, userData }) => {
   const [replies, setReplies] = useState([]);
   const [newReply, setNewReply] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -244,6 +211,7 @@ const ReplySystem = ({ postId, userData }) => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching replies:', error);
+      setError('Failed to load replies');
       setLoading(false);
     }
   };
@@ -260,7 +228,7 @@ const ReplySystem = ({ postId, userData }) => {
     try {
       const replyData = {
         postId,
-        content: newReply,
+        content: newReply.trim(),
         firebaseUid: userData.firebaseUid
       };
 
@@ -269,6 +237,7 @@ const ReplySystem = ({ postId, userData }) => {
       setNewReply('');
     } catch (error) {
       console.error('Error adding reply:', error);
+      alert('Failed to add reply. Please try again.');
     }
   };
 
@@ -282,7 +251,7 @@ const ReplySystem = ({ postId, userData }) => {
       const replyData = {
         postId,
         parentReplyId,
-        content,
+        content: content.trim(),
         firebaseUid: userData.firebaseUid
       };
 
@@ -311,6 +280,7 @@ const ReplySystem = ({ postId, userData }) => {
       setReplies(updateNestedReplies(replies));
     } catch (error) {
       console.error('Error adding nested reply:', error);
+      alert('Failed to add reply. Please try again.');
     }
   };
 
@@ -318,7 +288,7 @@ const ReplySystem = ({ postId, userData }) => {
     if (!window.confirm('Are you sure you want to delete this reply?')) return;
 
     try {
-      await replyAPI.deleteReply(replyId, userData.firebaseUid); // Changed from userData._id
+      await replyAPI.deleteReply(replyId, userData.firebaseUid);
       
       const removeReply = (replies) => {
         return replies
@@ -332,7 +302,18 @@ const ReplySystem = ({ postId, userData }) => {
       setReplies(removeReply(replies));
     } catch (error) {
       console.error('Error deleting reply:', error);
+      alert('Failed to delete reply. Please try again.');
     }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   };
 
   if (loading) {
@@ -340,6 +321,15 @@ const ReplySystem = ({ postId, userData }) => {
       <div className="replies-loading">
         <div className="spinner-small"></div>
         <p>Loading replies...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="replies-error">
+        <p>{error}</p>
+        <button onClick={fetchReplies} className="retry-button">Retry</button>
       </div>
     );
   }
@@ -360,12 +350,18 @@ const ReplySystem = ({ postId, userData }) => {
                 src={userData.profilePhoto}
                 alt={userData.displayName}
                 className="reply-form-avatar"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
               />
-            ) : (
-              <div className="reply-form-avatar reply-avatar-placeholder">
-                {userData.displayName?.charAt(0).toUpperCase()}
-              </div>
-            )}
+            ) : null}
+            <div 
+              className="reply-form-avatar reply-avatar-placeholder"
+              style={{ display: userData.profilePhoto ? 'none' : 'flex' }}
+            >
+              {getInitials(userData.displayName)}
+            </div>
           </div>
           <div className="reply-form-content">
             <textarea
@@ -374,8 +370,13 @@ const ReplySystem = ({ postId, userData }) => {
               placeholder="Share your thoughts..."
               className="reply-input"
               rows="3"
+              maxLength="5000"
             />
-            <button type="submit" className="reply-submit-btn">
+            <button 
+              type="submit" 
+              className="reply-submit-btn"
+              disabled={!newReply.trim()}
+            >
               Post Reply
             </button>
           </div>

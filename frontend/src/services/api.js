@@ -1,4 +1,4 @@
-// frontend/src/services/api.js
+// frontend/src/services/api.js - FIXED VERSION
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -8,14 +8,46 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
+
+// Request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('API Request:', config.method.toUpperCase(), config.url);
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      // Server responded with error
+      console.error('API Error:', error.response.status, error.response.data);
+    } else if (error.request) {
+      // Request made but no response
+      console.error('Network Error:', error.message);
+    } else {
+      // Something else happened
+      console.error('Error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // User API calls
 export const userAPI = {
   getUserByUsername: (username) => api.get(`/users/${username}`),
   getCurrentUser: (firebaseUid) => api.post('/users/current', { firebaseUid }),
   createOrUpdateUser: (userData) => api.post('/users/profile', userData),
-  searchUsers: (query) => api.get(`/users/search?query=${query}`),
+  searchUsers: (query) => api.get(`/users/search?query=${encodeURIComponent(query)}`),
   getUserStats: (username) => api.get(`/users/${username}/stats`),
 };
 
@@ -33,7 +65,7 @@ export const postAPI = {
   }),
   getPostsByAuthor: (username) => api.get(`/posts/author/${username}`),
   toggleLike: (postId, firebaseUid) => api.post(`/posts/${postId}/like`, { firebaseUid }),
-  getPostsByTag: (tag) => api.get(`/posts/tag/${tag}`),
+  getPostsByTag: (tag) => api.get(`/posts/tag/${encodeURIComponent(tag)}`),
   getTrendingTags: () => api.get('/posts/trending-tags'),
 };
 
@@ -41,23 +73,10 @@ export const postAPI = {
 export const replyAPI = {
   getRepliesByPost: (postId) => api.get(`/replies/post/${postId}`),
   createReply: (replyData) => api.post('/replies', replyData),
-  updateReply: (id, replyData) => api.put(`/replies/${id}`, replyData),
   deleteReply: (id, firebaseUid) => api.delete(`/replies/${id}`, { 
     data: { firebaseUid } 
   }),
   toggleLikeReply: (replyId, firebaseUid) => api.post(`/replies/${replyId}/like`, { firebaseUid }),
-};
-
-// Legacy comment API (deprecated - use replies instead)
-export const commentAPI = {
-  getCommentsByPost: (postId) => api.get(`/comments/post/${postId}`),
-  getCommentById: (id) => api.get(`/comments/${id}`),
-  createComment: (commentData) => api.post('/comments', commentData),
-  updateComment: (id, commentData) => api.put(`/comments/${id}`, commentData),
-  deleteComment: (id, authorId) => api.delete(`/comments/${id}`, { 
-    data: { authorId } 
-  }),
-  getCommentsByAuthor: (authorId) => api.get(`/comments/author/${authorId}`),
 };
 
 export default api;
