@@ -54,14 +54,14 @@ const Navbar = ({ firebaseUser, userData }) => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-brand">
-          <span className="brand-icon">🔒</span>
-          <span className="brand-name">AnonBlog</span>
+          <span className="brand-icon">📝</span>
+          <span className="brand-name">BlogHub</span>
         </Link>
 
         <form className="navbar-search" onSubmit={handleSearch}>
           <input
             type="text"
-            placeholder="Search users, tags..."
+            placeholder="Search posts and users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"

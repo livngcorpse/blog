@@ -12,7 +12,7 @@ const Home = ({ userData }) => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [filter, setFilter] = useState('latest'); // latest, popular
+  const [filter, setFilter] = useState('latest');
 
   useEffect(() => {
     fetchPosts();
@@ -49,7 +49,7 @@ const Home = ({ userData }) => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await postAPI.deletePost(postId, userData.firebaseUid); // Changed from userData._id
+      await postAPI.deletePost(postId, userData.firebaseUid);
       setPosts(posts.filter(post => post._id !== postId));
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -62,8 +62,8 @@ const Home = ({ userData }) => {
       <div className="home-container">
         <aside className="home-sidebar">
           <div className="sidebar-card">
-            <h3>🔒 Anonymous Blogging</h3>
-            <p>Share your thoughts freely without revealing your identity. Your privacy is our priority.</p>
+            <h3>📝 Share Your Stories</h3>
+            <p>Join our community of writers and readers. Share your thoughts and connect with others.</p>
           </div>
 
           <TrendingTags />
@@ -71,7 +71,7 @@ const Home = ({ userData }) => {
           {!userData && (
             <div className="sidebar-card cta-card">
               <h3>Join Us</h3>
-              <p>Start sharing your stories anonymously</p>
+              <p>Start writing and sharing your stories today</p>
               <Link to="/login" className="cta-button">
                 Get Started
               </Link>

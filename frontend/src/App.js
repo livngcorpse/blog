@@ -7,7 +7,6 @@ import { userAPI } from './services/api';
 
 // Components
 import Navbar from './components/Navbar';
-import PrivateRoute from './components/PrivateRoute';
 
 // Pages
 import Home from './pages/Home';
@@ -24,6 +23,19 @@ import TagPosts from './pages/TagPosts';
 import './App.css';
 import './styles/animations.css';
 
+// Protected Route Component (Fixed for v6)
+const ProtectedRoute = ({ children, firebaseUser, userData }) => {
+  if (!firebaseUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (firebaseUser && !userData) {
+    return <Navigate to="/edit-profile" replace />;
+  }
+
+  return children;
+};
+
 function App() {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -35,12 +47,10 @@ function App() {
       
       if (currentUser) {
         try {
-          // Fetch user data from backend
           const response = await userAPI.getCurrentUser(currentUser.uid);
           setUserData(response.data);
         } catch (error) {
           console.error('Error fetching user data:', error);
-          // If user doesn't exist in DB, redirect to profile setup
           if (error.response?.status === 404) {
             setUserData(null);
           }
@@ -72,54 +82,52 @@ function App() {
         <Navbar firebaseUser={firebaseUser} userData={userData} />
         <main className="main-content">
           <Routes>
-            <Route 
-              path="/" 
-              element={<Home userData={userData} />} 
-            />
+            <Route path="/" element={<Home userData={userData} />} />
+            
             <Route 
               path="/login" 
-              element={firebaseUser ? <Navigate to="/" /> : <Login />} 
+              element={firebaseUser ? <Navigate to="/" replace /> : <Login />} 
             />
+            
             <Route 
               path="/create-post" 
               element={
-                <PrivateRoute firebaseUser={firebaseUser} userData={userData}>
+                <ProtectedRoute firebaseUser={firebaseUser} userData={userData}>
                   <CreatePost userData={userData} />
-                </PrivateRoute>
+                </ProtectedRoute>
               } 
             />
+            
             <Route 
               path="/edit-post/:id" 
               element={
-                <PrivateRoute firebaseUser={firebaseUser} userData={userData}>
+                <ProtectedRoute firebaseUser={firebaseUser} userData={userData}>
                   <EditPost userData={userData} />
-                </PrivateRoute>
+                </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/post/:id" 
-              element={<SinglePost userData={userData} />} 
-            />
-            <Route 
-              path="/profile/:username" 
-              element={<Profile userData={userData} />} 
-            />
+            
+            <Route path="/post/:id" element={<SinglePost userData={userData} />} />
+            
+            <Route path="/profile/:username" element={<Profile userData={userData} />} />
+            
             <Route 
               path="/edit-profile" 
               element={
-                <PrivateRoute firebaseUser={firebaseUser} userData={userData}>
-                  <EditProfile firebaseUser={firebaseUser} userData={userData} setUserData={setUserData} />
-                </PrivateRoute>
+                <ProtectedRoute firebaseUser={firebaseUser} userData={userData}>
+                  <EditProfile 
+                    firebaseUser={firebaseUser} 
+                    userData={userData} 
+                    setUserData={setUserData} 
+                  />
+                </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/search" 
-              element={<Search userData={userData} />} 
-            />
-            <Route 
-              path="/tag/:tag" 
-              element={<TagPosts userData={userData} />} 
-            />
+            
+            <Route path="/search" element={<Search userData={userData} />} />
+            
+            <Route path="/tag/:tag" element={<TagPosts userData={userData} />} />
+            
             <Route 
               path="*" 
               element={

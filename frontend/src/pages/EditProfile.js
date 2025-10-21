@@ -14,7 +14,6 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPhotoWarning, setShowPhotoWarning] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -23,11 +22,6 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
       ...prev,
       [name]: value
     }));
-  };
-
-  const handlePhotoChange = (e) => {
-    setShowPhotoWarning(true);
-    handleChange(e);
   };
 
   const handleSubmit = async (e) => {
@@ -64,19 +58,8 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
         <div className="edit-profile-header">
           <h1>Edit Profile</h1>
           <p className="edit-profile-subtitle">
-            Keep your identity anonymous while personalizing your profile
+            Complete your profile to get started
           </p>
-        </div>
-
-        <div className="privacy-warning-box">
-          <div className="warning-icon">⚠️</div>
-          <div className="warning-content">
-            <h3>Privacy First</h3>
-            <p>
-              Your email and personal information are never displayed publicly. 
-              Choose a username and display name that don't reveal your identity.
-            </p>
-          </div>
         </div>
 
         {error && (
@@ -102,7 +85,7 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
                 value={formData.username}
                 onChange={handleChange}
                 className="form-input"
-                placeholder="anonymous_writer"
+                placeholder="john_doe"
                 required
                 pattern="[a-zA-Z0-9_]+"
                 minLength="3"
@@ -122,7 +105,7 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
                 value={formData.displayName}
                 onChange={handleChange}
                 className="form-input"
-                placeholder="Anonymous Writer"
+                placeholder="John Doe"
                 required
                 maxLength="50"
               />
@@ -140,7 +123,7 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
                 value={formData.tagline}
                 onChange={handleChange}
                 className="form-input"
-                placeholder="Sharing thoughts anonymously"
+                placeholder="Writer, developer, and coffee enthusiast"
                 maxLength="100"
               />
             </div>
@@ -173,16 +156,6 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
           <div className="form-section">
             <h3 className="section-title">Profile Photo</h3>
             
-            {showPhotoWarning && (
-              <div className="photo-warning">
-                <div className="warning-icon">🔒</div>
-                <div>
-                  <strong>Privacy Warning:</strong> Do not use a photo that reveals your identity. 
-                  Consider using an avatar, illustration, or abstract image instead.
-                </div>
-              </div>
-            )}
-
             <div className="form-group">
               <label htmlFor="profilePhoto" className="form-label">
                 Profile Photo URL
@@ -193,7 +166,7 @@ const EditProfile = ({ firebaseUser, userData, setUserData }) => {
                 id="profilePhoto"
                 name="profilePhoto"
                 value={formData.profilePhoto}
-                onChange={handlePhotoChange}
+                onChange={handleChange}
                 className="form-input"
                 placeholder="https://example.com/avatar.jpg"
               />
